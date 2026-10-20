@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SeedSathi">
+  <rect width="64" height="64" rx="14" fill="#143521"/>
+  <path d="M32 46V29" stroke="#f0b429" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M32 33c-1.6-7.4-6.6-11.6-13.5-12.6 1 7.7 5.4 12.2 13.5 12.6Z" fill="#93ad90"/>
+  <path d="M32 27.5c1.5-8.2 6.7-13 14.6-14-1 8.6-6 13.7-14.6 14Z" fill="#61a071"/>
+  <path d="M22 47h20" stroke="#f0b429" stroke-width="3.4" stroke-linecap="round"/>
+</svg>

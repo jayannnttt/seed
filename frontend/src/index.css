@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   SeedSathi design tokens
+   Deep forest green primary · sage secondary · warm ivory surfaces ·
+   muted earth brown neutrals · golden yellow accent for warnings/actions
+   ========================================================================== */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+
+  /* primary — deep forest green */
+  --color-forest-50: #f1f7f2;
+  --color-forest-100: #dfeee2;
+  --color-forest-200: #bfdcc6;
+  --color-forest-300: #93c2a0;
+  --color-forest-400: #61a071;
+  --color-forest-500: #3f8253;
+  --color-forest-600: #2d6840;
+  --color-forest-700: #245434;
+  --color-forest-800: #1d432a;
+  --color-forest-900: #143521; /* primary */
+  --color-forest-950: #0c2115;
+
+  /* secondary — sage green */
+  --color-sage-50: #f6f8f5;
+  --color-sage-100: #eaeFE8;
+  --color-sage-200: #d6e1d3;
+  --color-sage-300: #b6c9b2;
+  --color-sage-400: #93ad90;
+  --color-sage-500: #728f73;
+  --color-sage-600: #587459;
+
+  /* surfaces — warm ivory */
+  --color-ivory-50: #fdfcf9;
+  --color-ivory-100: #faf7f0;
+  --color-ivory-200: #f4efe3;
+  --color-ivory-300: #ebe4d3;
+
+  /* neutrals — muted earth brown */
+  --color-earth-100: #efebe3;
+  --color-earth-200: #ddd6c8;
+  --color-earth-300: #c2b7a3;
+  --color-earth-400: #9c8e77;
+  --color-earth-500: #7d705b;
+  --color-earth-600: #635744;
+  --color-earth-700: #4b4133;
+  --color-earth-800: #352e24;
+  --color-earth-900: #241f18;
+
+  /* accent — golden yellow (warnings, important actions) */
+  --color-gold-100: #fdf3d9;
+  --color-gold-200: #f9e4a8;
+  --color-gold-300: #f5d170;
+  --color-gold-400: #f0b429;
+  --color-gold-500: #dd9d10;
+  --color-gold-600: #b87d08;
+
+  /* status — clay red for critical */
+  --color-clay-100: #fbeae3;
+  --color-clay-200: #f4cdbd;
+  --color-clay-400: #d97b56;
+  --color-clay-500: #c25f3c;
+  --color-clay-600: #a44a2b;
+
+  --color-info-100: #e4eef7;
+  --color-info-500: #3d6f96;
+  --color-info-700: #2a4f6e;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-ivory-100);
+  color: var(--color-earth-900);
+  font-family: var(--font-sans);
+}
+
+/* thin, unobtrusive scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-earth-300) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-earth-300);
+  border-radius: 8px;
+}
+
+/* focus ring consistent with the brand */
+:focus-visible {
+  outline: 2px solid var(--color-forest-500);
+  outline-offset: 2px;
+}
+
+@keyframes seedsathi-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-in {
+  animation: seedsathi-fade-in 0.22s ease-out both;
+}

@@ -1,0 +1,715 @@
+﻿/* IoT Storage Monitoring — honest demo page.
+ *
+ * Every sensor in this deployment is SIMULATED. Each view that shows sensor
+ * data carries a visible "Simulated" indicator so nobody mistakes the demo
+ * readings for real hardware.
+ */
+import {
+  Activity, AlertTriangle, CheckCircle2, Cpu, Droplets, Gauge, Info,
+  MapPin, Radio, RefreshCw, Save, Settings2, Thermometer, Wifi, WifiOff,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Sparkline, ThresholdLineChart, TrendChart } from "../components/charts";
+import {
+  Badge, Button, Card, CardHeader, EmptyState, ErrorState, Field, Input,
+  Notice, PageHeader, Select, Spinner, useToast,
+} from "../components/ui";
+import { ApiError, api } from "../lib/api";
+import { formatDateTime, formatNumber, timeAgo, titleCase } from "../lib/format";
+import { useApi } from "../lib/hooks";
+import type { Bank, Reading, Threshold, TrendPoint } from "../lib/types";
+
+const HOUR_OPTIONS = [6, 12, 24, 48, 72];
+
+const METRICS = ["temperature", "humidity"] as const;
+type Metric = (typeof METRICS)[number];
+
+const METRIC_LABEL: Record<Metric, string> = {
+  temperature: "Temperature (°C)",
+  humidity: "Humidity (%RH)",
+};
+
+interface ThresholdForm {
+  min: string;
+  max: string;
+  note: string;
+}
+
+function thresholdFor(
+  list: Threshold[] | null, bankId: number, metric: Metric,
+): Threshold | undefined {
+  return list?.find((t) => t.bank_id === bankId && t.metric === metric);
+}
+
+type RiskLevel = "within" | "outside" | "missing" | "unknown";
+
+/** Compare a bank's latest reading against its configured thresholds. */
+function assessRisk(
+  reading: Reading | null,
+  thresholds: Threshold[] | null,
+  bankId: number,
+): { level: RiskLevel; detail: string; temp: Threshold | undefined; hum: Threshold | undefined } {
+  const temp = thresholdFor(thresholds, bankId, "temperature");
+  const hum = thresholdFor(thresholds, bankId, "humidity");
+  if (!reading) return { level: "unknown", detail: "No reading yet", temp, hum };
+  if (!temp && !hum) return { level: "missing", detail: "No configured threshold", temp, hum };
+
+  let above = false;
+  let below = false;
+  if (temp) {
+    if (reading.temperature_c > temp.max_value) above = true;
+    if (reading.temperature_c < temp.min_value) below = true;
+  }
+  if (hum) {
+    if (reading.humidity_pct > hum.max_value) above = true;
+    if (reading.humidity_pct < hum.min_value) below = true;
+  }
+  if (!above && !below) return { level: "within", detail: "Within configured range", temp, hum };
+  return {
+    level: "outside",
+    detail: above
+      ? "Above configured range — potential risk, inspect storage"
+      : "Below configured range — potential risk, inspect storage",
+    temp,
+    hum,
+  };
+}
+
+export default function Monitoring() {
+  const toast = useToast();
+  const navigate = useNavigate();
+
+  /* ------------------------------------------------------------- filters - */
+  const [bankFilter, setBankFilter] = useState<string>("all");
+  const [hours, setHours] = useState<number>(24);
+
+  const selectedBankId = bankFilter === "all" ? null : Number(bankFilter);
+
+  /* --------------------------------------------------------------- data -- */
+  const banks = useApi<Bank[]>(() => api.banks(), []);
+  const devices = useApi(() => api.devices(), []);
+  const readings = useApi(
+    () => api.readings(selectedBankId ?? undefined, hours),
+    [selectedBankId, hours],
+  );
+  const thresholds = useApi<Threshold[]>(() => api.thresholds(), []);
+
+  const refreshAll = () => {
+    banks.reload();
+    devices.reload();
+    readings.reload();
+    thresholds.reload();
+  };
+
+  const bankById = useMemo(() => {
+    const map = new Map<number, Bank>();
+    for (const b of banks.data ?? []) map.set(b.id, b);
+    return map;
+  }, [banks.data]);
+
+  const readingsByBank = useMemo(() => {
+    const map = new Map<number, Reading[]>();
+    for (const r of readings.data ?? []) {
+      const list = map.get(r.bank_id);
+      if (list) list.push(r);
+      else map.set(r.bank_id, [r]);
+    }
+    return map;
+  }, [readings.data]);
+
+  const visibleDevices = useMemo(() => {
+    const list = devices.data ?? [];
+    return selectedBankId === null
+      ? list
+      : list.filter((d) => d.bank_id === selectedBankId);
+  }, [devices.data, selectedBankId]);
+
+  /* --------------------------------------------------- device mutations -- */
+  const [simPending, setSimPending] = useState<number | null>(null);
+  const [statusPending, setStatusPending] = useState<number | null>(null);
+
+  const pushSimulated = async (bankId: number) => {
+    setSimPending(bankId);
+    try {
+      const result = await api.simulateReadings(bankId, 4);
+      readings.reload();
+      devices.reload();
+      toast.success(
+        "4 simulated readings added",
+        `${result.bank.name} — generated by the built-in demo simulator, not by hardware.`,
+      );
+      const open = result.open_alerts.length;
+      if (open > 0) {
+        toast.info(
+          `${open} open alert${open === 1 ? "" : "s"} at ${result.bank.name}`,
+          "An out-of-range reading indicates a potential risk that requires inspection. Review them in Alerts & Risk Management.",
+        );
+      }
+    } catch (err) {
+      toast.error(
+        "Could not push simulated readings",
+        err instanceof ApiError ? err.message : "Something went wrong.",
+      );
+    } finally {
+      setSimPending(null);
+    }
+  };
+
+  const toggleDeviceStatus = async (deviceId: number, next: string, name: string) => {
+    setStatusPending(deviceId);
+    try {
+      await api.updateDevice(deviceId, { status: next });
+      devices.reload();
+      toast.success(
+        `${name} set to ${titleCase(next)}`,
+        "Pushing simulated readings is only allowed while the sensor is online.",
+      );
+    } catch (err) {
+      toast.error(
+        "Could not update the device",
+        err instanceof ApiError ? err.message : "Something went wrong.",
+      );
+    } finally {
+      setStatusPending(null);
+    }
+  };
+
+  /* ---------------------------------------------------- threshold form -- */
+  const [form, setForm] = useState<Record<string, ThresholdForm>>({});
+  const [formErrors, setFormErrors] = useState<Record<string, { min?: string; max?: string }>>({});
+  const [savingMetric, setSavingMetric] = useState<Metric | null>(null);
+
+  useEffect(() => {
+    if (selectedBankId === null) return;
+    const next: Record<string, ThresholdForm> = {};
+    for (const metric of METRICS) {
+      const th = thresholdFor(thresholds.data, selectedBankId, metric);
+      next[metric] = {
+        min: th ? String(th.min_value) : "",
+        max: th ? String(th.max_value) : "",
+        note: th?.note ?? "",
+      };
+    }
+    setForm(next);
+    setFormErrors({});
+  }, [selectedBankId, thresholds.data]);
+
+  const saveThreshold = async (metric: Metric) => {
+    if (selectedBankId === null) return;
+    const values = form[metric];
+    if (!values) return;
+
+    const min = Number(values.min);
+    const max = Number(values.max);
+    const errors: { min?: string; max?: string } = {};
+    if (values.min.trim() === "" || Number.isNaN(min)) errors.min = "Enter a number";
+    if (values.max.trim() === "" || Number.isNaN(max)) errors.max = "Enter a number";
+    if (!errors.min && !errors.max && min >= max) {
+      errors.min = "Minimum must be lower than the maximum";
+      errors.max = "Maximum must be higher than the minimum";
+    }
+    setFormErrors((prev) => ({ ...prev, [metric]: errors }));
+    if (errors.min || errors.max) return;
+
+    setSavingMetric(metric);
+    try {
+      await api.setThreshold(selectedBankId, metric, {
+        min_value: min,
+        max_value: max,
+        note: values.note.trim() || undefined,
+      });
+      thresholds.reload();
+      toast.success(
+        `${titleCase(metric)} threshold saved`,
+        "These are operator-configured settings, not universal safe limits.",
+      );
+    } catch (err) {
+      toast.error(
+        "Could not save the threshold",
+        err instanceof ApiError ? err.message : "Something went wrong.",
+      );
+    } finally {
+      setSavingMetric(null);
+    }
+  };
+
+  /* --------------------------------------------------------- trend data -- */
+  const trendData: TrendPoint[] = useMemo(
+    () =>
+      (readings.data ?? []).map((r) => ({
+        time: r.recorded_at,
+        temperature_c: r.temperature_c,
+        humidity_pct: r.humidity_pct,
+        readings: 1,
+      })),
+    [readings.data],
+  );
+
+  const tempSeries = useMemo(
+    () =>
+      (readings.data ?? []).map((r) => ({
+        time: r.recorded_at,
+        value: r.temperature_c,
+      })),
+    [readings.data],
+  );
+
+  const humiditySeries = useMemo(
+    () =>
+      (readings.data ?? []).map((r) => ({
+        time: r.recorded_at,
+        value: r.humidity_pct,
+      })),
+    [readings.data],
+  );
+
+  const selectedBank = selectedBankId === null ? null : bankById.get(selectedBankId) ?? null;
+  const selectedTempTh = selectedBankId === null ? null : thresholdFor(thresholds.data, selectedBankId, "temperature");
+  const selectedHumTh = selectedBankId === null ? null : thresholdFor(thresholds.data, selectedBankId, "humidity");
+
+  const readingsEmpty =
+    !readings.loading && !readings.error && (readings.data?.length ?? 0) === 0;
+
+  /* ---------------------------------------------------------------- UI -- */
+  return (
+    <div>
+      <PageHeader
+        title="IoT Storage Monitoring"
+        description="Storage environment readings for every seed bank in the network, with per-bank configurable alert thresholds and demo controls to exercise the full alert workflow."
+        actions={
+          <>
+            <div className="w-[190px]">
+              <Select
+                value={bankFilter}
+                onChange={(e) => setBankFilter(e.target.value)}
+                aria-label="Filter by seed bank"
+              >
+                <option value="all">All banks</option>
+                {(banks.data ?? []).map((b) => (
+                  <option key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="w-[112px]">
+              <Select
+                value={String(hours)}
+                onChange={(e) => setHours(Number(e.target.value))}
+                aria-label="Time window"
+              >
+                {HOUR_OPTIONS.map((h) => (
+                  <option key={h} value={String(h)}>
+                    Last {h}h
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button icon={RefreshCw} onClick={refreshAll}>
+              Refresh
+            </Button>
+          </>
+        }
+      />
+
+      <Notice tone="gold" icon={Radio} className="mb-5">
+        <strong>Demo simulation —</strong> all sensors below are simulated. Readings are
+        generated by the built-in simulator to demonstrate the alert workflow. Real
+        ESP32/Arduino devices can later deliver readings to POST
+        <span className="font-mono text-[11.5px]"> /api/ingest/open/&#123;device_code&#125;</span>.
+      </Notice>
+
+      {/* -------------------------------------------------- device cards -- */}
+      {devices.loading ? (
+        <Card>
+          <Spinner label="Loading sensors…" />
+        </Card>
+      ) : devices.error ? (
+        <Card>
+          <ErrorState message={devices.error} onRetry={devices.reload} />
+        </Card>
+      ) : visibleDevices.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={Cpu}
+            title="No sensors registered"
+            description={
+              selectedBankId === null
+                ? "This network has no sensor devices yet."
+                : "No sensor device is registered for the selected seed bank."
+            }
+          />
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {visibleDevices.map((device) => {
+            const bankReadings = readingsByBank.get(device.bank_id) ?? [];
+            const latest = bankReadings.length > 0 ? bankReadings[bankReadings.length - 1] : null;
+            const risk = assessRisk(latest, thresholds.data, device.bank_id);
+            const tempSpark = bankReadings.slice(-12).map((r) => r.temperature_c);
+            const humSpark = bankReadings.slice(-12).map((r) => r.humidity_pct);
+            const offline = device.status !== "online";
+            const bank = bankById.get(device.bank_id);
+
+            return (
+              <Card key={device.id} className="flex flex-col">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-earth-100 px-5 py-4">
+                  <div className="min-w-0">
+                    <h2 className="text-[15px] font-semibold text-earth-900">{device.name}</h2>
+                    <p className="mt-0.5 flex items-center gap-1 text-[13px] text-earth-500">
+                      <MapPin size={12} className="shrink-0" />
+                      <span className="truncate">{device.bank_name}</span>
+                    </p>
+                    <p className="mt-1 font-mono text-[11px] text-earth-400">
+                      {device.device_code}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-1.5">
+                    {offline ? (
+                      <Badge tone="red" icon={WifiOff}>
+                        Offline
+                      </Badge>
+                    ) : (
+                      <Badge tone="green" icon={Wifi}>
+                        Online
+                      </Badge>
+                    )}
+                    {device.is_simulated && <Badge tone="info">Simulated</Badge>}
+                    <Badge tone="sage">
+                      {device.transport === "simulated" ? "Simulated feed" : titleCase(device.transport)}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 px-5 py-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-earth-500">
+                      Temperature
+                    </p>
+                    {latest ? (
+                      <>
+                        <p className="mt-0.5 text-[22px] font-semibold leading-tight text-earth-900">
+                          {formatNumber(latest.temperature_c, 1)}
+                          <span className="ml-1 text-[12px] font-normal text-earth-500">°C</span>
+                        </p>
+                        <Sparkline data={tempSpark} color="#c25f3c" height={34} />
+                      </>
+                    ) : (
+                      <p className="mt-2 text-[13px] italic text-earth-400">
+                        {readings.loading ? "Loading readings…" : "No reading yet"}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-earth-500">
+                      Humidity
+                    </p>
+                    {latest ? (
+                      <>
+                        <p className="mt-0.5 text-[22px] font-semibold leading-tight text-earth-900">
+                          {formatNumber(latest.humidity_pct, 1)}
+                          <span className="ml-1 text-[12px] font-normal text-earth-500">%RH</span>
+                        </p>
+                        <Sparkline data={humSpark} color="#2d6840" height={34} />
+                      </>
+                    ) : (
+                      <p className="mt-2 text-[13px] italic text-earth-400">
+                        {readings.loading ? "Loading readings…" : "No reading yet"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2 px-5 pb-4">
+                  <p className="text-[12px] text-earth-500">
+                    Last reading: <span className="text-earth-700">{timeAgo(device.last_reading_at)}</span>
+                    {bank?.location ? <span className="text-earth-400"> · {bank.location}</span> : null}
+                  </p>
+                  {risk.level === "within" && (
+                    <Badge tone="green" icon={CheckCircle2}>
+                      Within configured range
+                    </Badge>
+                  )}
+                  {risk.level === "outside" && (
+                    <Badge tone="red" icon={AlertTriangle}>
+                      {risk.detail}
+                    </Badge>
+                  )}
+                  {risk.level === "missing" && (
+                    <Badge tone="gold" icon={Info}>
+                      No configured threshold loaded
+                    </Badge>
+                  )}
+                  {(risk.temp || risk.hum) && (
+                    <p className="text-[11.5px] leading-relaxed text-earth-400">
+                      Configured range:
+                      {risk.temp && (
+                        <span>
+                          {" "}
+                          temp {formatNumber(risk.temp.min_value, 1)}–
+                          {formatNumber(risk.temp.max_value, 1)} °C
+                        </span>
+                      )}
+                      {risk.temp && risk.hum && <span> · </span>}
+                      {risk.hum && (
+                        <span>
+                          humidity {formatNumber(risk.hum.min_value, 1)}–
+                          {formatNumber(risk.hum.max_value, 1)} %RH
+                        </span>
+                      )}{" "}
+                      (operator-set example, not a universal standard).
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-earth-100 px-5 py-3.5">
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon={Activity}
+                    loading={simPending === device.bank_id}
+                    disabled={offline}
+                    title={
+                      offline
+                        ? "This sensor is marked offline. Set it online before pushing simulated readings (the API returns 409 otherwise)."
+                        : undefined
+                    }
+                    onClick={() => pushSimulated(device.bank_id)}
+                  >
+                    Push simulated reading
+                  </Button>
+                  <Button
+                    size="sm"
+                    icon={offline ? Wifi : WifiOff}
+                    loading={statusPending === device.id}
+                    title={offline ? "Set the sensor online again" : "Mark the sensor offline"}
+                    onClick={() =>
+                      toggleDeviceStatus(
+                        device.id,
+                        offline ? "online" : "offline",
+                        device.name,
+                      )
+                    }
+                  >
+                    {offline ? "Set online" : "Set offline"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => navigate("/directory")}>
+                    View bank
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ------------------------------------------------- recent trend -- */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader
+            icon={Gauge}
+            title={selectedBank ? "Recent readings" : "Network trend"}
+            subtitle={
+              readings.loading
+                ? "Loading readings…"
+                : readings.error
+                  ? "Readings could not be loaded"
+                  : `${readings.data?.length ?? 0} readings · simulated`
+            }
+            action={<Badge tone="info" icon={Radio}>Simulated data</Badge>}
+          />
+          {readings.loading ? (
+            <Spinner label="Loading readings…" />
+          ) : readings.error ? (
+            <ErrorState message={readings.error} onRetry={readings.reload} />
+          ) : readingsEmpty ? (
+            <EmptyState
+              icon={Gauge}
+              title="No readings in this window"
+              description={`No simulated readings were recorded for the selected scope in the last ${hours} hours. Push a simulated reading or widen the time window.`}
+            />
+          ) : (
+            <div className="px-4 py-4">
+              <TrendChart data={trendData} />
+            </div>
+          )}
+        </Card>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader
+              icon={Thermometer}
+              title="Temperature vs configured range"
+              subtitle={
+                selectedTempTh
+                  ? `Operator-set range ${formatNumber(selectedTempTh.min_value, 1)}–${formatNumber(selectedTempTh.max_value, 1)} °C`
+                  : "No configured range loaded"
+              }
+            />
+            {readings.loading ? (
+              <Spinner label="Loading readings…" />
+            ) : readings.error ? (
+              <ErrorState message={readings.error} onRetry={readings.reload} />
+            ) : readingsEmpty ? (
+              <EmptyState icon={Thermometer} title="No readings in this window" />
+            ) : (
+              <div className="px-4 py-4">
+                <ThresholdLineChart
+                  data={tempSeries}
+                  metric="temperature"
+                  min={selectedTempTh?.min_value}
+                  max={selectedTempTh?.max_value}
+                />
+              </div>
+            )}
+          </Card>
+          <Card>
+            <CardHeader
+              icon={Droplets}
+              title="Humidity vs configured range"
+              subtitle={
+                selectedHumTh
+                  ? `Operator-set range ${formatNumber(selectedHumTh.min_value, 1)}–${formatNumber(selectedHumTh.max_value, 1)} %RH`
+                  : "No configured range loaded"
+              }
+            />
+            {readings.loading ? (
+              <Spinner label="Loading readings…" />
+            ) : readings.error ? (
+              <ErrorState message={readings.error} onRetry={readings.reload} />
+            ) : readingsEmpty ? (
+              <EmptyState icon={Droplets} title="No readings in this window" />
+            ) : (
+              <div className="px-4 py-4">
+                <ThresholdLineChart
+                  data={humiditySeries}
+                  metric="humidity"
+                  min={selectedHumTh?.min_value}
+                  max={selectedHumTh?.max_value}
+                />
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* ------------------------------------------- threshold settings -- */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader
+            icon={Settings2}
+            title="Threshold settings"
+            subtitle={
+              selectedBank
+                ? `Configure the alert ranges for ${selectedBank.name}`
+                : "Select a seed bank to configure thresholds"
+            }
+          />
+          {selectedBankId === null ? (
+            <div className="px-5 py-5">
+              <Notice tone="info" icon={Info}>
+                Select a seed bank to configure thresholds. Ranges are stored per bank and
+                per metric (temperature, humidity) and drive the alert rules.
+              </Notice>
+            </div>
+          ) : thresholds.loading ? (
+            <Spinner label="Loading thresholds…" />
+          ) : thresholds.error ? (
+            <ErrorState message={thresholds.error} onRetry={thresholds.reload} />
+          ) : (
+            <div className="divide-y divide-earth-100">
+              {METRICS.map((metric) => {
+                const values = form[metric] ?? { min: "", max: "", note: "" };
+                const errors = formErrors[metric];
+                const saved = thresholdFor(thresholds.data, selectedBankId, metric);
+                return (
+                  <div key={metric} className="px-5 py-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[13.5px] font-semibold text-earth-800">
+                        {METRIC_LABEL[metric]}
+                      </p>
+                      <p className="text-[11.5px] text-earth-500">
+                        {saved
+                          ? `Saved range ${formatNumber(saved.min_value, 1)}–${formatNumber(saved.max_value, 1)}${
+                              metric === "temperature" ? " °C" : " %RH"
+                            } · updated ${formatDateTime(saved.updated_at)}`
+                          : "Using example defaults — nothing saved for this bank yet"}
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <Field label="Minimum" required error={errors?.min}>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          inputMode="decimal"
+                          value={values.min}
+                          placeholder={metric === "temperature" ? "e.g. 18" : "e.g. 40"}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              [metric]: { ...values, min: e.target.value },
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field label="Maximum" required error={errors?.max}>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          inputMode="decimal"
+                          value={values.max}
+                          placeholder={metric === "temperature" ? "e.g. 32" : "e.g. 70"}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              [metric]: { ...values, max: e.target.value },
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field label="Note" hint="Why this range was chosen">
+                        <Input
+                          type="text"
+                          value={values.note}
+                          placeholder="e.g. monsoon season range"
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              [metric]: { ...values, note: e.target.value },
+                            }))
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-[11.5px] text-earth-500">
+                        Readings outside this range raise an alert for {selectedBank?.name ?? "this bank"}.
+                      </p>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        icon={Save}
+                        loading={savingMetric === metric}
+                        onClick={() => saveThreshold(metric)}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="px-5 py-4">
+                <Notice tone="gold" icon={Info}>
+                  These are configurable operator settings and example defaults — NOT
+                  universal safe limits for every crop or seed species. Storage requirements
+                  vary by seed, so each bank must verify ranges with local experience.
+                </Notice>
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
