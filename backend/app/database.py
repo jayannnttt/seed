@@ -1,10 +1,10 @@
-"""Database engine and session management for SeedSathi."""
+"""Database engine and session management for Seed Vault."""
 import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_DB_PATH = os.path.join(BASE_DIR, "seedsathi.db")
+DEFAULT_DB_PATH = os.path.join(BASE_DIR, "seedvault.db")
 
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH}")
 

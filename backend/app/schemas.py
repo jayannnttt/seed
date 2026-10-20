@@ -1,4 +1,4 @@
-"""Pydantic schemas for the SeedSathi REST API."""
+"""Pydantic schemas for the Seed Vault REST API."""
 from datetime import datetime, date
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator

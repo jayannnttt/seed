@@ -1,4 +1,4 @@
-"""SQLAlchemy models for the SeedSathi community seed bank platform."""
+"""SQLAlchemy models for the Seed Vault community seed bank platform."""
 from datetime import datetime, date, timezone
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, Date, DateTime, Text,

@@ -1,4 +1,4 @@
-"""Run the SeedSathi API: `python run.py` (from backend/)."""
+"""Run the Seed Vault API: `python run.py` (from backend/)."""
 import os
 
 import uvicorn

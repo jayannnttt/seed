@@ -1,4 +1,4 @@
-# SeedSathi 🌱
+# Seed Vault 🌱
 **Community Seed Bank Monitoring & Seed Rescue Network**
 
 A full-stack demonstration application that helps communities monitor seed-storage
@@ -7,7 +7,7 @@ and — the signature feature — **recover seed stock across a network of commu
 banks when one of them is at risk**.
 
 > **One clear outcome:** when a community seed bank risks losing valuable seed
-> varieties, SeedSathi helps monitor the risk, identify potential replacement stock
+> varieties, Seed Vault helps monitor the risk, identify potential replacement stock
 > elsewhere, and coordinate the recovery.
 
 ---
@@ -21,7 +21,7 @@ Traditional and indigenous crop varieties are lost every year because of:
 - natural disasters that destroy a single community's entire stock,
 - a lack of coordination between community seed banks that hold the same varieties.
 
-SeedSathi is **not** another generic IoT dashboard. Its purpose is conservation
+Seed Vault is **not** another generic IoT dashboard. Its purpose is conservation
 coordination: notice a storage risk early, see exactly which lots are exposed, find
 reserve stock held by another community, and move it safely.
 
@@ -33,7 +33,7 @@ reserve stock held by another community, and move it safely.
 ┌────────────────────────────┐        REST/JSON        ┌──────────────────────────────┐
 │  React 19 + TypeScript     │  ◄──── /api proxy ────► │  FastAPI (Python 3.14)       │
 │  Vite 6 · Tailwind CSS 4   │                         │  SQLAlchemy 2 · Pydantic 2   │
-│  Lucide icons · Recharts   │                         │  SQLite (seedsathi.db)       │
+│  Lucide icons · Recharts   │                         │  SQLite (seedvault.db)       │
 └────────────────────────────┘                         └──────────────┬───────────────┘
                                                                       │
                                                         ┌─────────────▼────────────┐
@@ -48,7 +48,7 @@ reserve stock held by another community, and move it safely.
 | Frontend | React 19, TypeScript, Vite 6, Tailwind CSS 4 | collapsible sidebar, mobile drawer, responsive tables/charts |
 | Icons / charts | lucide-react, Recharts | shared chart & UI primitives in `src/components` |
 | Backend | FastAPI, Pydantic v2 | OpenAPI docs at `/docs` |
-| Database | SQLite via SQLAlchemy 2 | `backend/seedsathi.db`, created & seeded on startup |
+| Database | SQLite via SQLAlchemy 2 | `backend/seedvault.db`, created & seeded on startup |
 | Data exchange | REST (`/api/...`) | Vite dev server proxies `/api` → `http://127.0.0.1:8000` |
 | Sensors | Simulated (clearly labelled) + HTTP ingest endpoint for real hardware | see §8 |
 
@@ -174,7 +174,7 @@ Optional environment variables — copy `.env.example` to `.env`:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `DATABASE_URL` | `sqlite:///./seedsathi.db` | any SQLAlchemy URL (PostgreSQL works) |
+| `DATABASE_URL` | `sqlite:///./seedvault.db` | any SQLAlchemy URL (PostgreSQL works) |
 | `FRONTEND_ORIGIN` | `http://localhost:5173` | CORS allow-list |
 | `VITE_API_URL` | *(empty = same origin)* | set only if the API is hosted elsewhere |
 | `HOST` / `PORT` | `127.0.0.1` / `8000` | API bind address |
@@ -249,7 +249,7 @@ Simulated and real sensors share one pipeline, so nothing else needs to change:
    `POST /api/ingest/open/{device_code}` with
    `{"temperature_c": 27.4, "humidity_pct": 61.2}`.
 2. An ESP32/Arduino can call it directly (Wi-Fi), or an MQTT→HTTP bridge can forward
-   `seedsathi/{device_code}/readings` messages to the same endpoint.
+   `seedvault/{device_code}/readings` messages to the same endpoint.
 3. Set the device's `transport` to `http` or `mqtt` (PATCH `/api/devices/{id}`); the
    UI then stops showing the "Simulated" badge because readings arrive with
    `is_simulated=false`.
@@ -333,7 +333,7 @@ SEED VAULT/
 - **Thresholds are operator-set examples**, not agronomic standards; different crops
   and climates need different values.
 - **Conservation flags are local**, computed by documented rules. They are not
-  official endangered-status classifications and SeedSathi does not claim to predict
+  official endangered-status classifications and Seed Vault does not claim to predict
   seed survival or germination outcomes.
 - **Matching is by recorded variety name/ID.** Genetic equivalence between lots held
   at different banks is never asserted without verified records from both banks.

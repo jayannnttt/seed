@@ -1,4 +1,4 @@
-/* Types mirroring the SeedSathi FastAPI backend (see backend/app/schemas.py). */
+/* Types mirroring the Seed Vault FastAPI backend (see backend/app/schemas.py). */
 
 export interface Bank {
   id: number;

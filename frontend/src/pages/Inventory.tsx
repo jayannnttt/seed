@@ -1,4 +1,4 @@
-﻿/* Seed Inventory — the core CRUD screen of SeedSathi.
+/* Seed Inventory — the core CRUD screen of Seed Vault.
  *
  * Every number on this page comes from the backend. Germination rates that
  * were never measured are shown as "Not tested" / "Never tested — viability

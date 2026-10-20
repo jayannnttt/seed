@@ -1,4 +1,4 @@
-﻿/* Seed Rescue Simulation — the judge-facing demo of the full rescue
+/* Seed Rescue Simulation — the judge-facing demo of the full rescue
  * workflow.
  *
  * Everything on this page is a RULE-BASED SIMULATION: scenarios generate
@@ -474,7 +474,7 @@ function SimulationResults({
                       title="No reserve stock for this variety elsewhere in the network"
                       description="No other bank holds this recorded variety with free stock.
                         Document the variety as at-risk, and contact neighbouring networks
-                        outside SeedSathi for help."
+                        outside Seed Vault for help."
                     />
                   ) : (
                     group.matches.map((m, i) => (

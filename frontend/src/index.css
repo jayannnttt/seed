@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   SeedSathi design tokens
+   Seed Vault design tokens
    Deep forest green primary · sage secondary · warm ivory surfaces ·
    muted earth brown neutrals · golden yellow accent for warnings/actions
    ========================================================================== */
@@ -101,7 +101,7 @@ body {
   outline-offset: 2px;
 }
 
-@keyframes seedsathi-fade-in {
+@keyframes seedvault-fade-in {
   from {
     opacity: 0;
     transform: translateY(4px);
@@ -112,5 +112,5 @@ body {
   }
 }
 .animate-fade-in {
-  animation: seedsathi-fade-in 0.22s ease-out both;
+  animation: seedvault-fade-in 0.22s ease-out both;
 }

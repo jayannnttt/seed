@@ -1,4 +1,4 @@
-/* SeedSathi UI primitives — shared across every page.
+/* Seed Vault UI primitives — shared across every page.
  *
  * Styling rules: subtle 1px borders, restrained shadows, rounded cards,
  * warm ivory surfaces, deep forest green primary, golden accent reserved

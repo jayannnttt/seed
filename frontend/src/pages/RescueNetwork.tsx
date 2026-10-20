@@ -1,4 +1,4 @@
-﻿/* Seed Rescue Network — coordinate moving reserve seed from a bank that
+/* Seed Rescue Network — coordinate moving reserve seed from a bank that
  * has it to a bank at risk of losing a variety.
  *
  * Matching is rule-based and fully documented (backend/app/rules.py):
@@ -323,7 +323,7 @@ function MatchFinder({
               title="No reserve stock found in the network"
               description="No other bank holds this recorded variety with free stock. Suggested
                 next steps: widen the request to a related local variety agreed by your
-                community, ask neighbouring networks outside SeedSathi, or document the
+                community, ask neighbouring networks outside Seed Vault, or document the
                 variety as at-risk."
               action={emptyAction}
             />

@@ -5,7 +5,7 @@ import tempfile
 
 # Point the app's engine at a throw-away file BEFORE importing the app,
 # so the lifespan seeding never touches the developer's demo database.
-_TMP_DB = os.path.join(tempfile.gettempdir(), "seedsathi_test.db")
+_TMP_DB = os.path.join(tempfile.gettempdir(), "seedvault_test.db")
 if os.path.exists(_TMP_DB):
     try:
         os.remove(_TMP_DB)

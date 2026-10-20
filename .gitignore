@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+backend/seedvault.db
 backend/seedsathi.db
 backend/*.db
 .pytest_cache/

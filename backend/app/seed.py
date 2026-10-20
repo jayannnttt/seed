@@ -1,4 +1,4 @@
-"""Repeatable demo dataset for SeedSathi.
+"""Repeatable demo dataset for Seed Vault.
 
 Re-running this module NEVER creates duplicates: it is guarded by the
 ``seed_meta`` table. Run ``python -m app.seed --force`` (or call
@@ -234,7 +234,7 @@ def seed_demo_data(db: Session, force: bool = False) -> dict:
             germination_rate=rate, viability_test_date=tested,
             storage_location=storage, condition=condition, risk_flag="none",
             risk_flag_reason=None,
-            notes="Demonstration record — sample data for the SeedSathi hackathon demo.",
+            notes="Demonstration record — sample data for the Seed Vault demo.",
             is_demo=True)
         db.add(lot)
         lots.append(lot)

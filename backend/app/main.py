@@ -1,4 +1,4 @@
-"""SeedSathi FastAPI application entry point."""
+"""Seed Vault FastAPI application entry point."""
 import os
 from contextlib import asynccontextmanager
 
@@ -10,7 +10,7 @@ from .database import Base, engine, SessionLocal, get_db
 from . import seed
 from .routers import alerts, analytics, banks, inventory, monitoring, rescue, simulation
 
-APP_NAME = "SeedSathi API"
+APP_NAME = "Seed Vault API"
 APP_VERSION = "1.0.0"
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
 
@@ -31,7 +31,7 @@ app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
     description=(
-        "SeedSathi — Community Seed Bank Monitoring & Seed Rescue Network.\n\n"
+        "Seed Vault — Community Seed Bank Monitoring & Seed Rescue Network.\n\n"
         "All sensor readings in the demo are SIMULATED unless delivered through "
         "POST /api/ingest/open/{device_code} by real hardware. Alert thresholds are "
         "operator-configured examples, not universal agronomic standards. Risk flags "

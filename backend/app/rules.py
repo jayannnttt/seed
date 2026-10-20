@@ -1,4 +1,4 @@
-"""Documented, transparent rule-based logic for SeedSathi.
+"""Documented, transparent rule-based logic for Seed Vault.
 
 Everything in this module is a DETERMINISTIC, EXPLAINABLE rule set.
 There is no machine-learning model involved. Each function returns the

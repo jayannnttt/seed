@@ -1,4 +1,4 @@
-/* API client for the SeedSathi backend.
+/* API client for the Seed Vault backend.
  *
  * All requests go to the same origin (Vite dev server proxies /api to the
  * FastAPI server on :8000). Override with VITE_API_URL if you host them
@@ -32,7 +32,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch {
     throw new ApiError(
-      "Cannot reach the SeedSathi backend. Start it with `python run.py` inside backend/.",
+      "Cannot reach the Seed Vault backend. Start it with `python run.py` inside backend/.",
       0,
     );
   }

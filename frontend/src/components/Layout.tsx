@@ -77,7 +77,7 @@ function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: 
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem("seedsathi.sidebar") === "collapsed",
+    () => localStorage.getItem("seedvault.sidebar") === "collapsed",
   );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -90,7 +90,7 @@ export default function Layout() {
   const demoActivity = activity.data?.[0]?.is_demo ?? true;
 
   useEffect(() => {
-    localStorage.setItem("seedsathi.sidebar", collapsed ? "collapsed" : "expanded");
+    localStorage.setItem("seedvault.sidebar", collapsed ? "collapsed" : "expanded");
   }, [collapsed]);
 
   useEffect(() => {
@@ -122,7 +122,7 @@ export default function Layout() {
           {!collapsed && (
             <div className="min-w-0">
               <p className="truncate font-display text-[17px] font-semibold leading-none text-white">
-                SeedSathi
+                Seed Vault
               </p>
               <p className="mt-1 truncate text-[10.5px] text-forest-200">Seed Rescue Network</p>
             </div>
@@ -188,7 +188,7 @@ export default function Layout() {
             </span>
             <div>
               <p className="font-display text-[15px] font-semibold leading-none text-forest-900">
-                SeedSathi
+                Seed Vault
               </p>
               <p className="mt-0.5 text-[10px] text-earth-500">Community Seed Rescue Network</p>
             </div>
@@ -203,7 +203,7 @@ export default function Layout() {
         </main>
 
         <footer className="border-t border-earth-200 bg-white/70 px-4 py-4 text-center text-[11.5px] text-earth-500 sm:px-6">
-          SeedSathi — demonstration build for community seed-bank monitoring. Storage readings are
+          Seed Vault — demonstration build for community seed-bank monitoring. Storage readings are
           simulated unless real hardware is connected. Local risk flags are not official
           conservation statuses.
         </footer>
@@ -223,7 +223,7 @@ export default function Layout() {
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gold-400 text-forest-950">
                   <Sprout size={16} />
                 </span>
-                <p className="font-display text-[16px] font-semibold text-white">SeedSathi</p>
+                <p className="font-display text-[16px] font-semibold text-white">Seed Vault</p>
               </div>
               <button
                 onClick={() => setMobileOpen(false)}

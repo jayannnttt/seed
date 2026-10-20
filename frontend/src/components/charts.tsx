@@ -1,4 +1,4 @@
-/* Consistent Recharts styling for SeedSathi.
+/* Consistent Recharts styling for Seed Vault.
  *
  * Every chart in the app uses these wrappers so axes, tooltips, grids and
  * colours match. Charts are responsive and readable on small screens.
